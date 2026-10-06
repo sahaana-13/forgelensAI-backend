@@ -1,0 +1,1 @@
+export default function Timeline({items=[]}){return <div className="timeline">{items.map((x,i)=><div className="timeline-item" key={i}><div className="timeline-dot"/><div><b>{x.title}</b><span>{x.time}</span><p>{x.detail}</p></div></div>)}</div>}

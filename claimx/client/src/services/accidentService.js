@@ -1,0 +1,14 @@
+import api from './api';
+export const accidents=()=>api.get('/api/accidents');
+export const getAccident=(id)=>api.get(`/api/accidents/${id}`);
+export const sos=(data)=>api.post('/api/accidents/sos',data);
+export const setClaimType=(id,claim_type)=>api.patch(`/api/accidents/${id}/claim-type`,{claim_type});
+export const evidence=(id)=>api.get(`/api/accidents/${id}/evidence`);
+export const uploadEvidence=(id,form)=>api.post(`/api/accidents/${id}/evidence`,form,{headers:{'Content-Type':'multipart/form-data'}});
+export const statements=(id)=>api.get(`/api/accidents/${id}/statements`);
+export const compare=(id)=>api.post(`/api/accidents/${id}/compare-statements`);
+export const missing=(id)=>api.get(`/api/accidents/${id}/missing-information`);
+export const evidenceAnalysis=(id)=>api.post(`/api/accidents/${id}/analyze-evidence`);
+export const fnol=(id)=>api.post(`/api/accidents/${id}/fnol`);
+export const getFnol=(id)=>api.get(`/api/accidents/${id}/fnol`);
+export const downloadFnol=(id)=>api.get(`/api/accidents/${id}/fnol/pdf`,{responseType:'blob'});
