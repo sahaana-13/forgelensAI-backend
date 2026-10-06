@@ -1,0 +1,23 @@
+from datetime import date, datetime, timedelta
+from app.core.database import Base, engine, SessionLocal
+from app.core.security import hash_password
+from app.models import *
+
+def run():
+    Base.metadata.create_all(bind=engine); db=SessionLocal()
+    if db.query(User).count(): print("Seed already present"); return
+    admin=User(email="admin@claimx.com",password_hash=hash_password("Admin@123"),role="ADMIN",created_at=date.today())
+    user=User(email="user@claimx.com",password_hash=hash_password("User@123"),role="CLAIMANT",created_at=date.today())
+    user2=User(email="user2@claimx.com",password_hash=hash_password("User@123"),role="CLAIMANT",created_at=date.today())
+    db.add_all([admin,user,user2]); db.flush()
+    db.add_all([UserProfile(user_id=user.id,full_name="Aarav Menon",phone="9000000001",address="Synthetic Demo Address, Mangaluru"),UserProfile(user_id=user2.id,full_name="Diya Rao",phone="9000000002",address="Synthetic Demo Address, Chennai")])
+    vehicles=[Vehicle(owner_id=user.id,registration_number="KA-XX-1234",make="Tata",model="Nexon",vehicle_type="Car",manufacturing_year=2024,rc_number="RC-DEMO-001"),Vehicle(owner_id=user.id,registration_number="TN-XX-5678",make="Hyundai",model="i20",vehicle_type="Car",manufacturing_year=2023,rc_number="RC-DEMO-002"),Vehicle(owner_id=user2.id,registration_number="TN-XX-2468",make="Honda",model="City",vehicle_type="Car",manufacturing_year=2022,rc_number="RC-DEMO-003")]; db.add_all(vehicles); db.flush()
+    db.add_all([InsurancePolicy(owner_id=user.id,vehicle_id=vehicles[0].id,insurance_company="DemoSecure Insurance",policy_number="POL-DEMO-1001",start_date=date(2026,1,1),end_date=date(2027,1,1)),InsurancePolicy(owner_id=user.id,vehicle_id=vehicles[1].id,insurance_company="DemoSecure Insurance",policy_number="POL-DEMO-1002",start_date=date(2026,2,1),end_date=date(2027,2,1)),InsurancePolicy(owner_id=user2.id,vehicle_id=vehicles[2].id,insurance_company="DemoSecure Insurance",policy_number="POL-DEMO-1003",start_date=date(2026,3,1),end_date=date(2027,3,1))])
+    for idx in range(5):
+        a=Accident(incident_id=f"CLX-2026-{idx+1:05d}",claimant_id=user.id if idx<4 else user2.id,vehicle_id=vehicles[idx%3].id,accident_time=datetime(2026,9,20+idx,1,7),latitude=12.9141+idx*0.001,longitude=74.8560+idx*0.001,location_text="Mangaluru, Karnataka",status=["COMPLETED","ANALYSIS_COMPLETED","EVIDENCE_COLLECTION","FNOL_DRAFT","OPEN"][idx],claim_type=["Both","Third Party","Own Damage","Both","Third Party"][idx],description="Synthetic demonstration accident record."); db.add(a); db.flush()
+        db.add_all([AccidentParty(accident_id=a.id,party_label="A",name="Aarav Menon",vehicle_registration=vehicles[idx%3].registration_number),AccidentParty(accident_id=a.id,party_label="B",name="Other Party",vehicle_registration="KA-XX-9999")])
+        if idx==0:
+            s1=Statement(accident_id=a.id,party_label="A",raw_text="I was travelling around 40 km/h and the signal was green when the other vehicle reached my right side.",structured_data={"speed":"40 km/h","traffic_signal":"green","damage":"right side","location":"Mangaluru","weather":"UNKNOWN"},created_at=datetime.now()); s2=Statement(accident_id=a.id,party_label="B",raw_text="I was travelling around 60 km/h and my signal was green when the other vehicle moved across.",structured_data={"speed":"60 km/h","traffic_signal":"green","damage":"front side","location":"Mangaluru","weather":"UNKNOWN"},created_at=datetime.now()); db.add_all([s1,s2]); db.flush(); comp=StatementComparison(accident_id=a.id,result={"items":[{"field":"Location","party_a":"Mangaluru","party_b":"Mangaluru","status":"AGREED"},{"field":"Speed","party_a":"40 km/h","party_b":"60 km/h","status":"CONFLICTING"},{"field":"Signal","party_a":"Green","party_b":"Green","status":"AGREED"},{"field":"Weather","party_a":"UNKNOWN","party_b":"UNKNOWN","status":"UNKNOWN"}]},created_at=datetime.now()); db.add(comp); db.add_all([MissingInformation(accident_id=a.id,item="Police documentation",reason="Not uploaded in demo",created_at=datetime.now()),MissingInformation(accident_id=a.id,item="Repair estimate",reason="Not uploaded in demo",created_at=datetime.now())]); db.add(FnolReport(accident_id=a.id,status="DRAFT",content='{"incident_id":"CLX-2026-00001","readiness":75,"summary":"Party A and Party B provided differing speed reports. This comparison does not determine fault or liability."}',generated_at=datetime.now(),updated_at=datetime.now()))
+        db.add(Notification(user_id=a.claimant_id,message=f"Accident incident {a.incident_id} has been created.",created_at=datetime.now()))
+    db.commit(); print("Seed complete")
+if __name__=="__main__": run()
